@@ -3304,27 +3304,26 @@ resource "aws_rds_cluster" "test" {
 
 func testAccClusterConfig_engineVersionTwoInstancesBlueGreen(rName string, upgrade bool) string {
 	return fmt.Sprintf(`
-
 data "aws_rds_engine_version" "test" {
-	engine             = "aurora-mysql"
-	preferred_versions = ["8.0.mysql_aurora.3.02.0"]
-	}
-	
-resource "aws_rds_cluster_parameter_group" "test" {
-	name        = "mysqlaurora58cluster"
-	family      = "aurora-mysql8.0"
-	description = "RDS default cluster parameter group"
+  engine             = "aurora-mysql"
+  preferred_versions = ["8.0.mysql_aurora.3.02.0"]
+}
 
-	parameter {
-		name  = "binlog_format"
-		value = "ROW"
-		apply_method = "pending-reboot"
-	}
+resource "aws_rds_cluster_parameter_group" "test" {
+  name        = "%[1]s-cluster"
+  family      = "aurora-mysql8.0"
+  description = "RDS default cluster parameter group"
+
+  parameter {
+    name         = "binlog_format"
+    value        = "ROW"
+    apply_method = "pending-reboot"
+  }
 }
 
 resource "aws_db_parameter_group" "test" {
-	name   = "mysqlaurora58instance"
-	family = "aurora-mysql8.0"
+  name   = "%[1]s-instance"
+  family = "aurora-mysql8.0"
 }
 
 resource "aws_rds_cluster" "test" {
@@ -3340,22 +3339,24 @@ resource "aws_rds_cluster" "test" {
 }
 
 resource "aws_rds_cluster_instance" "test" {
-  count              = 2
-  identifier         = "%[1]s-test-${count.index}"
-  cluster_identifier = aws_rds_cluster.test.cluster_identifier
-  engine             = aws_rds_cluster.test.engine
-  engine_version     = aws_rds_cluster.test.engine_version
-  instance_class     = "db.t3.medium"
+  count                   = 2
+  identifier              = "%[1]s-test-${count.index}"
+  cluster_identifier      = aws_rds_cluster.test.cluster_identifier
+  engine                  = aws_rds_cluster.test.engine
+  engine_version          = aws_rds_cluster.test.engine_version
+  instance_class          = "db.t3.medium"
   db_parameter_group_name = aws_db_parameter_group.test.name
 }
 
 resource "aws_rds_cluster_blue_green_deployment" "test" {
-	cluster_identifier = aws_rds_cluster.test.cluster_identifier
-	create_deployment = true
-	cleanup_resources = true
-	engine = aws_rds_cluster_instance.test[0].engine
-	switchover_enabled = true
-  }
+  cluster_identifier = aws_rds_cluster.test.cluster_identifier
+  create_deployment  = true
+  cleanup_resources  = true
+  engine             = aws_rds_cluster_instance.test[0].engine
+  switchover_enabled = true
+}
+
+
 
 
 `, rName, upgrade)
